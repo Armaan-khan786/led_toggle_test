@@ -1,0 +1,19 @@
+name: ESP32 LED Toggle Hardware CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hardware-test:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Show Files
+        run: dir
+
+      - name: Run LED Toggle Test
+        run: led_toggle.bat
