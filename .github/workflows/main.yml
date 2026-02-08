@@ -14,34 +14,28 @@ steps:
   - name: Checkout repository
     uses: actions/checkout@v4
 
-  - name: Setup Arduino CLI
-    run: |
-      echo "Arduino CLI assumed present in repo folder"
+  - name: Show folder structure (DEBUG)
+    run: dir
 
   - name: Compile Sender ESP
     run: |
-      cd sender
-      ..\arduino-cli.exe compile --fqbn esp32:esp32:esp32 sender.ino
+      .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 .\sender\sender.ino
 
   - name: Compile Receiver ESP
     run: |
-      cd receiver
-      ..\arduino-cli.exe compile --fqbn esp32:esp32:esp32 receiver.ino
+      .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 .\receiver\receiver.ino
 
   - name: Flash Sender ESP (COM6)
     run: |
-      cd sender
-      ..\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 sender.ino
+      .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 .\sender\sender.ino
 
   - name: Flash Receiver ESP (COM7)
     run: |
-      cd receiver
-      ..\arduino-cli.exe upload -p COM7 --fqbn esp32:esp32:esp32 receiver.ino
+      .\arduino-cli.exe upload -p COM7 --fqbn esp32:esp32:esp32 .\receiver\receiver.ino
 
   - name: Run Toggle Monitor
     run: |
       python .\monitor.py
 
   - name: Test Result
-    run: |
-      echo "Toggle test completed ✅"
+    run: echo "Toggle test completed ✅"
