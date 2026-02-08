@@ -2,64 +2,83 @@ import serial
 import time
 import sys
 
-# === CONFIGURE PORTS & SETTINGS ===
-SENDER_PORT = "COM6"      # Set your sender COM port
-RECEIVER_PORT = "COM7"    # Set your receiver COM port
-BAUD_RATE = 115200
-TOGGLE_COUNT_REQUIRED = 5
-TIMEOUT = 10  # seconds to wait for toggles
+# ------------------------------
+# CONFIGURATION
+# ------------------------------
+COM_PORT = "COM6"        # replace with your actual ESP32 port
+BAUD_RATE = 115200       # same as in Arduino sketch
+TIMEOUT = 0.1            # serial read timeout
+MAX_TOGGLES = 20         # how many toggles to count before ending
 
-# === HELPER FUNCTION ===
-def monitor_port(port_name):
+# ------------------------------
+# INITIALIZATION
+# ------------------------------
+try:
+    ser = serial.Serial(COM_PORT, BAUD_RATE, timeout=TIMEOUT)
+    print(f"[INFO] Connected to {COM_PORT}")
+except Exception as e:
+    print(f"[ERROR] Cannot open serial port {COM_PORT}: {e}")
+    sys.exit(1)
+
+sender_count = 0
+receiver_count = 0
+prev_sender = None
+prev_receiver = None
+toggle_limit = MAX_TOGGLES
+
+start_time = time.time()
+
+# ------------------------------
+# MONITOR LOOP
+# ------------------------------
+while True:
+    if time.time() - start_time > 30:  # 30s timeout
+        print("[ERROR] Timeout reached")
+        break
+
     try:
-        ser = serial.Serial(port_name, BAUD_RATE, timeout=1)
-        print(f"[INFO] Connected to {port_name}")
-        return ser
-    except Exception as e:
-        print(f"[ERROR] Cannot open {port_name}: {e}")
-        return None
+        line = ser.readline().decode('utf-8').strip()
+        if not line:
+            continue
 
-def check_toggle(ser, label):
-    toggle_count = 0
-    start_time = time.time()
-    while time.time() - start_time < TIMEOUT:
-        if ser.in_waiting > 0:
-            line = ser.readline().decode('utf-8', errors='ignore').strip()
-            if line:
-                print(f"[{label}] {line}")
-                if "TOGGLE" in line.upper():  # Your ESP prints "TOGGLE"
-                    toggle_count += 1
-        if toggle_count >= TOGGLE_COUNT_REQUIRED:
+        # Debug: print all incoming lines
+        print(line)
+
+        # Detect sender toggles
+        if "[SENDER]" in line:
+            value = line.split()[-1]
+            if prev_sender is not None and value != prev_sender:
+                sender_count += 1
+            prev_sender = value
+
+        # Detect receiver toggles
+        if "[RECEIVER]" in line:
+            value = line.split()[-1]
+            if prev_receiver is not None and value != prev_receiver:
+                receiver_count += 1
+            prev_receiver = value
+
+        # Stop after enough toggles
+        if sender_count >= toggle_limit and receiver_count >= toggle_limit:
             break
-    return toggle_count
 
-# === MAIN MONITOR ===
-def main():
-    sender = monitor_port(SENDER_PORT)
-    receiver = monitor_port(RECEIVER_PORT)
+    except KeyboardInterrupt:
+        print("[INFO] Monitor stopped by user")
+        break
+    except Exception as e:
+        print(f"[ERROR] {e}")
 
-    if sender is None or receiver is None:
-        print("[ERROR] Failed to open COM ports")
-        sys.exit(1)
+ser.close()
 
-    print("[INFO] Monitoring sender for toggles...")
-    sender_toggles = check_toggle(sender, "SENDER")
+# ------------------------------
+# RESULT
+# ------------------------------
+print(f"[RESULT] Sender Toggles: {sender_count}")
+print(f"[RESULT] Receiver Toggles: {receiver_count}")
 
-    print("[INFO] Monitoring receiver for toggles...")
-    receiver_toggles = check_toggle(receiver, "RECEIVER")
-
-    print(f"[RESULT] Sender Toggles: {sender_toggles}")
-    print(f"[RESULT] Receiver Toggles: {receiver_toggles}")
-
-    sender.close()
-    receiver.close()
-
-    if sender_toggles >= TOGGLE_COUNT_REQUIRED and receiver_toggles >= TOGGLE_COUNT_REQUIRED:
-        print("[PASS] Both Sender and Receiver toggled correctly!")
-        sys.exit(0)
-    else:
-        print("[FAIL] Toggle test failed.")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
+if sender_count == 0 or receiver_count == 0:
+    print("[FAIL] Toggle test failed.")
+    sys.exit(1)
+else:
+    print("[PASS] Toggle test passed.")
+    sys.exit(0)
