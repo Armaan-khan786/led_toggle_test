@@ -1,28 +1,30 @@
-name: LED Toggle Test
+name: ESP32 Toggle Test
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
-  build-flash-test:
-    runs-on: self-hosted
+  build-and-test:
+    runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Show current directory
-        run: pwd
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-      - name: List files
-        run: dir
+    - name: Install pyserial
+      run: pip install pyserial
 
-      - name: Update Arduino Core Index
-        run: .\arduino-cli.exe core update-index
+    - name: Upload to ESP32
+      run: |
+        arduino-cli compile --fqbn esp32:esp32:esp32 sender/sender.ino
+        arduino-cli upload -p COM6 --fqbn esp32:esp32:esp32 sender/sender.ino
 
-      - name: Install ESP32 Core
-        run: .\arduino-cli.exe core install esp32:esp32
-
-      - name: Run LED Toggle Batch Script
-        run: .\led_toggle.bat
+    - name: Run Toggle Monitor
+      run: python monitor.py
