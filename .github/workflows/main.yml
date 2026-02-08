@@ -3,28 +3,25 @@ name: ESP32 Toggle Test
 on:
   push:
     branches: [main]
-  pull_request:
 
 jobs:
   build-and-test:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Compile and Upload Sender
+        run: |
+          .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 sender/sender.ino
+          .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 sender/sender.ino
 
-    - name: Install pyserial
-      run: pip install pyserial
+      - name: Compile and Upload Receiver
+        run: |
+          .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 receiver/receiver.ino
+          .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 receiver/receiver.ino
 
-    - name: Upload to ESP32
-      run: |
-        arduino-cli compile --fqbn esp32:esp32:esp32 sender/sender.ino
-        arduino-cli upload -p COM6 --fqbn esp32:esp32:esp32 sender/sender.ino
-
-    - name: Run Toggle Monitor
-      run: python monitor.py
+      - name: Run Monitor
+        run: |
+          python monitor.py
