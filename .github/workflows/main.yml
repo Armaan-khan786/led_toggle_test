@@ -1,30 +1,28 @@
-name: ESP32 LED Toggle CI
+name: LED Toggle Test
 
 on:
   push:
   pull_request:
 
 jobs:
-  build-and-test:
+  build-flash-test:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Show current directory
+        run: pwd
+
+      - name: List files
+        run: dir
+
+      - name: Update Arduino Core Index
+        run: .\arduino-cli.exe core update-index
+
       - name: Install ESP32 Core
-        run: |
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32
+        run: .\arduino-cli.exe core install esp32:esp32
 
-      - name: Compile Sender
-        run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 sender
-
-      - name: Compile Receiver
-        run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 receiver
-
-      - name: Run Monitor Script
-        run: |
-          python monitor.py
+      - name: Run LED Toggle Batch Script
+        run: .\led_toggle.bat
