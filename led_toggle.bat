@@ -1,19 +1,44 @@
-echo Uploading Sender...
-arduino-cli upload -p COM6 --fqbn esp32:esp32:esp32 sender\sender.ino
-timeout /t 5
+@echo off
+echo ================================
+echo Build and Flash ESP32 Projects
+echo ================================
 
-echo Uploading Receiver...
-arduino-cli upload -p COM7 --fqbn esp32:esp32:esp32 receiver\receiver.ino
-timeout /t 5
-
-echo Starting Monitor Test...
-python monitor.py
-echo Monitor Exit Code: %ERRORLEVEL%
-
-IF %ERRORLEVEL% NEQ 0 (
-    echo TEST FAILED
-    exit /b 1
+REM --- Sender ---
+echo ----- Compiling Sender -----
+arduino-cli compile --fqbn esp32:esp32:esp32 sender/sender.ino
+if %errorlevel% neq 0 (
+    echo Compilation failed for Sender. Exiting...
+    pause
+    exit /b %errorlevel%
 )
 
-echo TEST PASSED
-exit /b 0
+echo ----- Uploading Sender to COM6 -----
+arduino-cli upload -p COM6 --fqbn esp32:esp32:esp32 sender/sender.ino
+if %errorlevel% neq 0 (
+    echo Upload failed for Sender. Exiting...
+    pause
+    exit /b %errorlevel%
+)
+
+REM --- Receiver ---
+echo ----- Compiling Receiver -----
+arduino-cli compile --fqbn esp32:esp32:esp32 receiver/receiver.ino
+if %errorlevel% neq 0 (
+    echo Compilation failed for Receiver. Exiting...
+    pause
+    exit /b %errorlevel%
+)
+
+echo ----- Uploading Receiver to COM7 -----
+arduino-cli upload -p COM7 --fqbn esp32:esp32:esp32 receiver/receiver.ino
+if %errorlevel% neq 0 (
+    echo Upload failed for Receiver. Exiting...
+    pause
+    exit /b %errorlevel%
+)
+
+REM --- Start Monitoring ---
+echo ===== Starting Monitor =====
+python monitor.py
+
+pause
