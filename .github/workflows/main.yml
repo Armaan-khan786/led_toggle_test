@@ -1,27 +1,40 @@
-name: ESP32 Toggle Test
+name: ESP32 LED Toggle Test
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  pull_request:
 
 jobs:
   build-and-test:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Compile and Upload Sender
+      - name: Setup Arduino CLI
+        run: |
+          echo "Using arduino-cli.exe from repo"
+          dir
+
+      - name: Update Board Index
+        run: |
+          .\arduino-cli.exe core update-index
+
+      - name: Install ESP32 Core
+        run: |
+          .\arduino-cli.exe core install esp32:esp32
+
+      - name: Compile Sender
         run: |
           .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 sender/sender.ino
-          .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 sender/sender.ino
 
-      - name: Compile and Upload Receiver
+      - name: Compile Receiver
         run: |
           .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 receiver/receiver.ino
-          .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 receiver/receiver.ino
 
-      - name: Run Monitor
+      - name: Run Monitor Script
         run: |
-          python monitor.py
+          python .\monitor.py
