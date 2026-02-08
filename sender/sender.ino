@@ -1,19 +1,29 @@
-#define SIGNAL_PIN 4      // Wire to ESP2
-#define LED_PIN 2         // Built-in LED
+#define SIGNAL_PIN 4
+#define LED_PIN 2
+
+int lastState = -1;
 
 void setup() {
-  pinMode(SIGNAL_PIN, OUTPUT);
+  Serial.begin(115200);
+  delay(2000);
+
+  pinMode(SIGNAL_PIN, INPUT_PULLDOWN);
   pinMode(LED_PIN, OUTPUT);
+
+  Serial.println("Receiver Ready");
 }
 
 void loop() {
-  // HIGH
-  digitalWrite(SIGNAL_PIN, HIGH);
-  digitalWrite(LED_PIN, HIGH);
-  delay(500);
+  int state = digitalRead(SIGNAL_PIN);
 
-  // LOW
-  digitalWrite(SIGNAL_PIN, LOW);
-  digitalWrite(LED_PIN, LOW);
-  delay(500);
+  digitalWrite(LED_PIN, state);
+
+  if (state != lastState) {
+    if (state == HIGH)
+      Serial.println("[RECEIVER] 1");
+    else
+      Serial.println("[RECEIVER] 0");
+
+    lastState = state;
+  }
 }
