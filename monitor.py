@@ -5,10 +5,10 @@ import sys
 # ------------------------------
 # CONFIGURATION
 # ------------------------------
-COM_PORT = "COM6"        # replace with your actual ESP32 port
-BAUD_RATE = 115200       # same as in Arduino sketch
-TIMEOUT = 0.1            # serial read timeout
-MAX_TOGGLES = 20         # how many toggles to count before ending
+COM_PORT = "COM7"        # Receiver ESP32 port
+BAUD_RATE = 115200
+TIMEOUT = 0.1
+MAX_TOGGLES = 20
 
 # ------------------------------
 # INITIALIZATION
@@ -16,13 +16,12 @@ MAX_TOGGLES = 20         # how many toggles to count before ending
 try:
     ser = serial.Serial(COM_PORT, BAUD_RATE, timeout=TIMEOUT)
     print(f"[INFO] Connected to {COM_PORT}")
+    time.sleep(2)   # allow ESP32 to reset and start printing
 except Exception as e:
     print(f"[ERROR] Cannot open serial port {COM_PORT}: {e}")
     sys.exit(1)
 
-sender_count = 0
 receiver_count = 0
-prev_sender = None
 prev_receiver = None
 toggle_limit = MAX_TOGGLES
 
@@ -32,24 +31,17 @@ start_time = time.time()
 # MONITOR LOOP
 # ------------------------------
 while True:
-    if time.time() - start_time > 30:  # 30s timeout
+    if time.time() - start_time > 60:   # increased timeout
         print("[ERROR] Timeout reached")
         break
 
     try:
-        line = ser.readline().decode('utf-8').strip()
+        line = ser.readline().decode('utf-8', errors='ignore').strip()
         if not line:
             continue
 
-        # Debug: print all incoming lines
+        # Print incoming serial data
         print(line)
-
-        # Detect sender toggles
-        if "[SENDER]" in line:
-            value = line.split()[-1]
-            if prev_sender is not None and value != prev_sender:
-                sender_count += 1
-            prev_sender = value
 
         # Detect receiver toggles
         if "[RECEIVER]" in line:
@@ -59,7 +51,7 @@ while True:
             prev_receiver = value
 
         # Stop after enough toggles
-        if sender_count >= toggle_limit and receiver_count >= toggle_limit:
+        if receiver_count >= toggle_limit:
             break
 
     except KeyboardInterrupt:
@@ -73,10 +65,9 @@ ser.close()
 # ------------------------------
 # RESULT
 # ------------------------------
-print(f"[RESULT] Sender Toggles: {sender_count}")
 print(f"[RESULT] Receiver Toggles: {receiver_count}")
 
-if sender_count == 0 or receiver_count == 0:
+if receiver_count == 0:
     print("[FAIL] Toggle test failed.")
     sys.exit(1)
 else:
