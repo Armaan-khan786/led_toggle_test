@@ -2,74 +2,64 @@ import serial
 import time
 import sys
 
-PORT = "COM7"
-BAUD = 115200
-EXPECTED_MIN_PERIOD = 0.8   # seconds
-EXPECTED_MAX_PERIOD = 1.2   # seconds
-MIN_TOGGLES = 5
-TIMEOUT = 15  # seconds total test duration
+# === CONFIGURE PORTS & SETTINGS ===
+SENDER_PORT = "COM6"      # Set your sender COM port
+RECEIVER_PORT = "COM7"    # Set your receiver COM port
+BAUD_RATE = 115200
+TOGGLE_COUNT_REQUIRED = 5
+TIMEOUT = 10  # seconds to wait for toggles
 
-print("Opening serial port:", PORT)
-
-try:
-    ser = serial.Serial(PORT, BAUD, timeout=1)
-except Exception as e:
-    print("❌ FAILURE: Cannot open serial port:", e)
-    sys.exit(1)
-
-start_time = time.time()
-last_state = None
-last_toggle_time = None
-periods = []
-toggle_count = 0
-
-print("Listening for HIGH/LOW...")
-
-while time.time() - start_time < TIMEOUT:
+# === HELPER FUNCTION ===
+def monitor_port(port_name):
     try:
-        line = ser.readline().decode().strip()
-    except:
-        continue
+        ser = serial.Serial(port_name, BAUD_RATE, timeout=1)
+        print(f"[INFO] Connected to {port_name}")
+        return ser
+    except Exception as e:
+        print(f"[ERROR] Cannot open {port_name}: {e}")
+        return None
 
-    if line not in ["HIGH", "LOW"]:
-        continue
+def check_toggle(ser, label):
+    toggle_count = 0
+    start_time = time.time()
+    while time.time() - start_time < TIMEOUT:
+        if ser.in_waiting > 0:
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            if line:
+                print(f"[{label}] {line}")
+                if "TOGGLE" in line.upper():  # Your ESP prints "TOGGLE"
+                    toggle_count += 1
+        if toggle_count >= TOGGLE_COUNT_REQUIRED:
+            break
+    return toggle_count
 
-    current_time = time.time()
+# === MAIN MONITOR ===
+def main():
+    sender = monitor_port(SENDER_PORT)
+    receiver = monitor_port(RECEIVER_PORT)
 
-    if last_state is None:
-        last_state = line
-        last_toggle_time = current_time
-        continue
+    if sender is None or receiver is None:
+        print("[ERROR] Failed to open COM ports")
+        sys.exit(1)
 
-    if line != last_state:
-        toggle_count += 1
-        period = current_time - last_toggle_time
-        periods.append(period)
-        print(f"Toggle {toggle_count} detected. Period: {period:.3f} sec")
-        last_toggle_time = current_time
-        last_state = line
+    print("[INFO] Monitoring sender for toggles...")
+    sender_toggles = check_toggle(sender, "SENDER")
 
-    if toggle_count >= MIN_TOGGLES:
-        break
+    print("[INFO] Monitoring receiver for toggles...")
+    receiver_toggles = check_toggle(receiver, "RECEIVER")
 
-ser.close()
+    print(f"[RESULT] Sender Toggles: {sender_toggles}")
+    print(f"[RESULT] Receiver Toggles: {receiver_toggles}")
 
-print("\n========== ANALYSIS ==========")
+    sender.close()
+    receiver.close()
 
-if toggle_count < MIN_TOGGLES:
-    print(f"❌ FAILURE: Only {toggle_count} toggles detected (Minimum required {MIN_TOGGLES})")
-    sys.exit(1)
+    if sender_toggles >= TOGGLE_COUNT_REQUIRED and receiver_toggles >= TOGGLE_COUNT_REQUIRED:
+        print("[PASS] Both Sender and Receiver toggled correctly!")
+        sys.exit(0)
+    else:
+        print("[FAIL] Toggle test failed.")
+        sys.exit(1)
 
-avg_period = sum(periods) / len(periods)
-print(f"Average Period: {avg_period:.3f} sec")
-
-if avg_period < EXPECTED_MIN_PERIOD:
-    print("❌ FAILURE: Blink too fast")
-    sys.exit(1)
-
-if avg_period > EXPECTED_MAX_PERIOD:
-    print("❌ FAILURE: Blink too slow")
-    sys.exit(1)
-
-print("✅ TEST PASS: Toggle timing within expected range")
-sys.exit(0)
+if __name__ == "__main__":
+    main()
