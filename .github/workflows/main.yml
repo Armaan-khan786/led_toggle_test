@@ -1,34 +1,47 @@
-name: ESP32 LED Toggle CI
+name: ESP32 Toggle Test
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
-  build:
-    runs-on: windows-latest
-
+  toggle-test:
+    runs-on: self-hosted
     steps:
-      # 1️⃣ Checkout your repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Arduino CLI
       - name: Setup Arduino CLI
         run: |
-          choco install arduino-cli --no-progress -y
-          arduino-cli config init
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32
+          echo "Arduino CLI assumed present in repo folder"
 
-      # 3️⃣ Build sender.ino
-      - name: Build Sender Sketch
+      - name: Compile Sender ESP
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 sender/sender.ino
+          cd sender
+          ..\arduino-cli.exe compile --fqbn esp32:esp32:esp32 sender.ino
 
-      # 4️⃣ Build receiver.ino
-      - name: Build Receiver Sketch
+      - name: Compile Receiver ESP
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32 receiver/receiver.ino
+          cd ..\receiver
+          ..\arduino-cli.exe compile --fqbn esp32:esp32:esp32 receiver.ino
+
+      - name: Flash Sender ESP (COM6)
+        run: |
+          cd sender
+          ..\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 sender.ino
+
+      - name: Flash Receiver ESP (COM7)
+        run: |
+          cd ..\receiver
+          ..\arduino-cli.exe upload -p COM7 --fqbn esp32:esp32:esp32 receiver.ino
+
+      - name: Run Toggle Monitor
+        run: |
+          cd ..
+          python .\monitor.py
+
+      - name: Test Result
+        run: |
+          echo "Toggle test completed ✅"
