@@ -5,7 +5,7 @@ int lastState = -1;
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);
 
   pinMode(SIGNAL_PIN, INPUT_PULLDOWN);
   pinMode(LED_PIN, OUTPUT);
@@ -20,9 +20,9 @@ void loop() {
 
   if (state != lastState) {
     if (state == HIGH)
-      Serial.println("HIGH");
+      Serial.println("[RECEIVER] 1");
     else
-      Serial.println("LOW");
+      Serial.println("[RECEIVER] 0");
 
     lastState = state;
   }
