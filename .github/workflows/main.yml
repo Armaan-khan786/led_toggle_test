@@ -1,45 +1,44 @@
-name: ESP32 LED Toggle Test
+name: ESP32 Toggle Test
 
+# Trigger workflow on push or pull request
 on:
   push:
-    branches:
-      - main
   pull_request:
 
 jobs:
   build-and-test:
-    runs-on: windows-latest
+    # Use self-hosted runner (your PC)
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout Repository
+      # 1️⃣ Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Arduino CLI
-        run: |
-          echo "Using arduino-cli.exe from repo"
-          dir
+      # 2️⃣ Setup Python for monitor.py
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
 
-      - name: Update Board Index
-        run: |
-          .\arduino-cli.exe core update-index
-
-      - name: Install ESP32 Core
-        run: |
-          .\arduino-cli.exe core install esp32:esp32
-
-      - name: Compile Sender
-        run: |
-          .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 sender/sender.ino
-
-      - name: Compile Receiver
-        run: |
-          .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 receiver/receiver.ino
-
-      - name: Setup Python Dependencies
+      # 3️⃣ Install pyserial
+      - name: Install pyserial
         run: |
           python -m pip install --upgrade pip
           pip install pyserial
 
-      - name: Run Monitor Script
+      # 4️⃣ Compile Sender
+      - name: Compile Sender
         run: |
-          python .\monitor.py
+          .\arduino-cli.exe core update-index
+          .\arduino-cli.exe core install esp32:esp32
+          .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 sender/sender.ino
+
+      # 5️⃣ Compile Receiver
+      - name: Compile Receiver
+        run: |
+          .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 receiver/receiver.ino
+
+      # 6️⃣ Run Monitor Test
+      - name: Run Monitor
+        run: python .\monitor.py
