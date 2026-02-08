@@ -1,41 +1,33 @@
 name: ESP32 Toggle Test
 
 on:
-workflow_dispatch:
-push:
-branches:
-- main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-toggle-test:
-runs-on: self-hosted
+  toggle-test:
+    runs-on: self-hosted
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Show folder structure (DEBUG)
-    run: dir
+      - name: Compile Sender ESP
+        run: .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 .\sender\sender.ino
 
-  - name: Compile Sender ESP
-    run: |
-      .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 .\sender\sender.ino
+      - name: Compile Receiver ESP
+        run: .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 .\receiver\receiver.ino
 
-  - name: Compile Receiver ESP
-    run: |
-      .\arduino-cli.exe compile --fqbn esp32:esp32:esp32 .\receiver\receiver.ino
+      - name: Flash Sender ESP (COM6)
+        run: .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 .\sender\sender.ino
 
-  - name: Flash Sender ESP (COM6)
-    run: |
-      .\arduino-cli.exe upload -p COM6 --fqbn esp32:esp32:esp32 .\sender\sender.ino
+      - name: Flash Receiver ESP (COM7)
+        run: .\arduino-cli.exe upload -p COM7 --fqbn esp32:esp32:esp32 .\receiver\receiver.ino
 
-  - name: Flash Receiver ESP (COM7)
-    run: |
-      .\arduino-cli.exe upload -p COM7 --fqbn esp32:esp32:esp32 .\receiver\receiver.ino
+      - name: Run Toggle Monitor
+        run: python .\monitor.py
 
-  - name: Run Toggle Monitor
-    run: |
-      python .\monitor.py
-
-  - name: Test Result
-    run: echo "Toggle test completed ✅"
+      - name: Test Result
+        run: echo Toggle test completed
